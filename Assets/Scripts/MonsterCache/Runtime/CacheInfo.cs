@@ -17,15 +17,15 @@ namespace MonsterCache.Runtime
         private readonly int removeLineCount;
 
         /// <summary>
-        /// 初始化缓存信息的新实例。
+        /// 初始化对象池信息。
         /// </summary>
-        /// <param name="poolType">缓存类型。</param>
-        /// <param name="unusedLineCount">未使用缓存数量。</param>
-        /// <param name="usingLineCount">正在使用缓存数量。</param>
-        /// <param name="acquireLineCount">获取缓存数量。</param>
-        /// <param name="releaseLineCount">归还缓存数量。</param>
-        /// <param name="addLineCount">增加缓存数量。</param>
-        /// <param name="removeLineCount">移除缓存数量。</param>
+        /// <param name="poolType">池化对象类型。</param>
+        /// <param name="unusedLineCount">池中空闲对象数量。</param>
+        /// <param name="usingLineCount">当前正在使用的对象数量。</param>
+        /// <param name="acquireLineCount">累计获取对象次数。</param>
+        /// <param name="releaseLineCount">累计归还对象次数。</param>
+        /// <param name="addLineCount">累计创建新对象次数。</param>
+        /// <param name="removeLineCount">累计销毁对象次数。</param>
         public CacheInfo(Type poolType, int unusedLineCount, int usingLineCount, int acquireLineCount,
             int releaseLineCount, int addLineCount, int removeLineCount)
         {
