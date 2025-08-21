@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace MonsterCache.Runtime
 {
-    public static class CacheMgr
+    public static class CachePoolMgr
     {
-        private static readonly Dictionary<Type, Cache> caches = new();
+        private static readonly Dictionary<Type, CachePool> cachePoolDict = new();
 
         /// <summary>
         /// 当前管理的对象池数量
@@ -14,9 +14,9 @@ namespace MonsterCache.Runtime
         {
             get
             {
-                lock (caches)
+                lock (cachePoolDict)
                 {
-                    return caches.Count;
+                    return cachePoolDict.Count;
                 }
             }
         }
@@ -25,20 +25,20 @@ namespace MonsterCache.Runtime
         /// 获取所有对象池的统计信息
         /// </summary>
         /// <returns>对象池信息数组</returns>
-        public static CacheInfo[] GetAllPoolInfos()
+        public static CachePoolInfo[] GetAllPoolInfos()
         {
             var index = 0;
-            CacheInfo[] result;
+            CachePoolInfo[] result;
 
-            lock (caches)
+            lock (cachePoolDict)
             {
-                result = new CacheInfo[caches.Count];
-                foreach (var cacheItem in caches)
+                result = new CachePoolInfo[cachePoolDict.Count];
+                foreach (var cacheItem in cachePoolDict)
                 {
-                    result[index++] = new CacheInfo(cacheItem.Key, cacheItem.Value.UnusedLineCount,
-                        cacheItem.Value.UsingLineCount, cacheItem.Value.AcquireLineCount,
-                        cacheItem.Value.ReleaseLineCount, cacheItem.Value.AddLineCount,
-                        cacheItem.Value.RemoveLineCount);
+                    result[index++] = new CachePoolInfo(cacheItem.Key, cacheItem.Value.UnusedPoolableCount,
+                        cacheItem.Value.UsedPoolableCount, cacheItem.Value.AcquirePoolableCount,
+                        cacheItem.Value.ReleasePoolableCount, cacheItem.Value.AddPoolableCount,
+                        cacheItem.Value.RemovePoolableCount);
                 }
             }
 
@@ -50,15 +50,15 @@ namespace MonsterCache.Runtime
         /// </summary>
         public static void Clear()
         {
-            lock (caches)
+            lock (cachePoolDict)
             {
                 // 逐个清空对象池
-                foreach (var cache in caches.Values)
+                foreach (var cachePool in cachePoolDict.Values)
                 {
-                    cache.ReleaseAll();
+                    cachePool.ReleaseAll();
                 }
 
-                caches.Clear();
+                cachePoolDict.Clear();
             }
         }
 
@@ -69,8 +69,8 @@ namespace MonsterCache.Runtime
         /// <returns>对象实例</returns>
         public static T Acquire<T>() where T : class, IPoolable, new()
         {
-            var cache = GetCache(typeof(T));
-            return cache.Acquire<T>();
+            var cachePool = GetCache(typeof(T));
+            return cachePool.Acquire<T>();
         }
 
         /// <summary>
@@ -80,8 +80,8 @@ namespace MonsterCache.Runtime
         /// <returns>对象实例</returns>
         public static IPoolable Acquire(Type cachedType)
         {
-            var cache = GetCache(cachedType);
-            return cache.Acquire();
+            var cachePool = GetCache(cachedType);
+            return cachePool.Acquire();
         }
 
         /// <summary>
@@ -94,8 +94,8 @@ namespace MonsterCache.Runtime
             if (poolable == null)
                 throw new ArgumentNullException(nameof(poolable));
 
-            var cache = GetCache(poolable.GetType());
-            cache.Release(poolable);
+            var cachePool = GetCache(poolable.GetType());
+            cachePool.Release(poolable);
         }
 
         /// <summary>
@@ -119,8 +119,8 @@ namespace MonsterCache.Runtime
             if (count <= 0)
                 throw new ArgumentOutOfRangeException(nameof(count), "Count must be greater than zero");
 
-            var cache = GetCache(cachedType);
-            cache.Expand(count);
+            var cachePool = GetCache(cachedType);
+            cachePool.Expand(count);
         }
 
         /// <summary>
@@ -144,8 +144,8 @@ namespace MonsterCache.Runtime
             if (count <= 0)
                 throw new ArgumentOutOfRangeException(nameof(count), "Count must be greater than zero");
 
-            var cache = GetCache(cachedType);
-            cache.Shrink(count);
+            var cachePool = GetCache(cachedType);
+            cachePool.Shrink(count);
         }
 
         /// <summary>
@@ -154,22 +154,22 @@ namespace MonsterCache.Runtime
         /// <param name="cachedType">对象类型</param>
         /// <returns>对象池实例</returns>
         /// <exception cref="ArgumentNullException">对象类型不能为空</exception>
-        private static Cache GetCache(Type cachedType)
+        private static CachePool GetCache(Type cachedType)
         {
             if (cachedType == null)
                 throw new ArgumentNullException(nameof(cachedType));
 
-            Cache cache;
-            lock (caches)
+            CachePool cachePool;
+            lock (cachePoolDict)
             {
-                if (!caches.TryGetValue(cachedType, out cache))
+                if (!cachePoolDict.TryGetValue(cachedType, out cachePool))
                 {
-                    cache = new Cache(cachedType);
-                    caches.Add(cachedType, cache);
+                    cachePool = new CachePool(cachedType);
+                    cachePoolDict.Add(cachedType, cachePool);
                 }
             }
 
-            return cache;
+            return cachePool;
         }
     }
 }

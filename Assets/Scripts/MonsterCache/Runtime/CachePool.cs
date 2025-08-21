@@ -6,51 +6,51 @@ namespace MonsterCache.Runtime
     /// <summary>
     /// 单一类型的对象池实现
     /// </summary>
-    public class Cache
+    public class CachePool
     {
         private readonly Queue<IPoolable> poolables;
         private readonly Type poolType;
-        private int usingLineCount;
-        private int acquireLineCount;
-        private int releaseLineCount;
-        private int addLineCount;
-        private int removeLineCount;
+        private int usedPoolableCount;
+        private int acquirePoolableCount;
+        private int releasePoolableCount;
+        private int addPoolableCount;
+        private int removePoolableCount;
 
         /// <summary>
         /// 初始化指定类型的对象池
         /// </summary>
         /// <param name="poolType">池化对象类型</param>
-        public Cache(Type poolType)
+        public CachePool(Type poolType)
         {
             poolables = new Queue<IPoolable>();
             this.poolType = poolType;
-            usingLineCount = 0;
-            acquireLineCount = 0;
-            releaseLineCount = 0;
-            addLineCount = 0;
-            removeLineCount = 0;
+            usedPoolableCount = 0;
+            acquirePoolableCount = 0;
+            releasePoolableCount = 0;
+            addPoolableCount = 0;
+            removePoolableCount = 0;
         }
 
         /// <summary>池化对象类型</summary>
         public Type PoolType => poolType;
 
         /// <summary>池中空闲对象数量</summary>
-        public int UnusedLineCount => poolables.Count;
+        public int UnusedPoolableCount => poolables.Count;
 
         /// <summary>当前正在使用的对象数量</summary>
-        public int UsingLineCount => usingLineCount;
+        public int UsedPoolableCount => usedPoolableCount;
 
         /// <summary>累计获取对象次数</summary>
-        public int AcquireLineCount => acquireLineCount;
+        public int AcquirePoolableCount => acquirePoolableCount;
 
         /// <summary>累计归还对象次数</summary>
-        public int ReleaseLineCount => releaseLineCount;
+        public int ReleasePoolableCount => releasePoolableCount;
 
         /// <summary>累计创建新对象次数</summary>
-        public int AddLineCount => addLineCount;
+        public int AddPoolableCount => addPoolableCount;
 
         /// <summary>累计销毁对象次数</summary>
-        public int RemoveLineCount => removeLineCount;
+        public int RemovePoolableCount => removePoolableCount;
 
         /// <summary>
         /// 从对象池获取一个指定类型的对象
@@ -63,8 +63,8 @@ namespace MonsterCache.Runtime
             if (typeof(T) != poolType)
                 throw new ArgumentException($"Type {typeof(T)} does not match the {poolType} type");
 
-            usingLineCount++;
-            acquireLineCount++;
+            usedPoolableCount++;
+            acquirePoolableCount++;
 
             lock (poolables)
             {
@@ -74,7 +74,7 @@ namespace MonsterCache.Runtime
                 }
             }
 
-            addLineCount++;
+            addPoolableCount++;
             return new T();
         }
 
@@ -84,8 +84,8 @@ namespace MonsterCache.Runtime
         /// <returns>对象实例（从池中获取或新创建）</returns>
         public IPoolable Acquire()
         {
-            usingLineCount++;
-            acquireLineCount++;
+            usedPoolableCount++;
+            acquirePoolableCount++;
             lock (poolables)
             {
                 if (poolables.Count > 0)
@@ -94,7 +94,7 @@ namespace MonsterCache.Runtime
                 }
             }
 
-            addLineCount++;
+            addPoolableCount++;
             return (IPoolable)Activator.CreateInstance(poolType);
         }
 
@@ -125,8 +125,8 @@ namespace MonsterCache.Runtime
                 poolables.Enqueue(poolable);
             }
 
-            releaseLineCount++;
-            usingLineCount--;
+            releasePoolableCount++;
+            usedPoolableCount--;
         }
 
         /// <summary>
@@ -145,7 +145,7 @@ namespace MonsterCache.Runtime
                 {
                     var instance = (IPoolable)Activator.CreateInstance(poolType);
                     poolables.Enqueue(instance);
-                    addLineCount++;
+                    addPoolableCount++;
                 }
             }
         }
@@ -166,7 +166,7 @@ namespace MonsterCache.Runtime
                 for (int i = 0; i < actualRemoveCount; i++)
                 {
                     poolables.Dequeue();
-                    removeLineCount++;
+                    removePoolableCount++;
                 }
             }
         }
@@ -180,7 +180,7 @@ namespace MonsterCache.Runtime
             {
                 var clearedCount = poolables.Count;
                 poolables.Clear();
-                removeLineCount += clearedCount;
+                removePoolableCount += clearedCount;
             }
         }
     }
