@@ -1,6 +1,6 @@
 namespace MonsterCache.Runtime
 {
-    public interface ICachedType
+    public interface IPoolable
     {
         void Release();
     }

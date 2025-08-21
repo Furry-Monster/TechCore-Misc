@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace MonsterCache.Runtime
 {
-    public static class CacheMgr
+    public static partial class CacheMgr
     {
         private static readonly Dictionary<Type, Cache> caches = new();
 
@@ -35,46 +35,60 @@ namespace MonsterCache.Runtime
             {
                 foreach (var cache in caches.Values)
                 {
-                    // 清除每个缓存
+                    cache.Clear();
                 }
 
                 caches.Clear();
             }
         }
 
-        public static T Acquire<T>() where T : class, ICachedType, new()
+        public static T Acquire<T>() where T : class, IPoolable, new()
         {
-            throw new NotImplementedException();
+            var cache = GetCache(typeof(T));
+            return cache.Acquire<T>();
         }
 
-        public static ICachedType Acquire(Type cachedType)
+        public static IPoolable Acquire(Type cachedType)
         {
-            throw new NotImplementedException();
+            var cache = GetCache(cachedType);
+            return cache.Acquire();
         }
 
-        public static void Release(ICachedType cachedType)
+        public static void Release(IPoolable poolable)
         {
-            throw new NotImplementedException();
+            if (poolable == null)
+                throw new ArgumentNullException(nameof(poolable));
+
+            var cache = GetCache(poolable.GetType());
+            cache.Release(poolable);
         }
 
-        public static void Expand<T>(int count) where T : class, ICachedType, new()
+        public static void Expand<T>(int count) where T : class, IPoolable, new()
         {
-            throw new NotImplementedException();
+            Expand(typeof(T), count);
         }
 
         public static void Expand(Type cachedType, int count)
         {
-            throw new NotImplementedException();
+            if (count <= 0)
+                throw new ArgumentOutOfRangeException(nameof(count), "Count must be greater than zero");
+
+            var cache = GetCache(cachedType);
+            cache.Expand(count);
         }
 
-        public static void Shrink<T>(int count) where T : class, ICachedType, new()
+        public static void Shrink<T>(int count) where T : class, IPoolable, new()
         {
-            throw new NotImplementedException();
+            Shrink(typeof(T), count);
         }
 
         public static void Shrink(Type cachedType, int count)
         {
-            throw new NotImplementedException();
+            if (count <= 0)
+                throw new ArgumentOutOfRangeException(nameof(count), "Count must be greater than zero");
+
+            var cache = GetCache(cachedType);
+            cache.Shrink(count);
         }
 
         private static Cache GetCache(Type cachedType)
