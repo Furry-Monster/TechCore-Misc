@@ -113,8 +113,8 @@ namespace MonsterCache.Runtime
             foreach (var report in sortedReports)
             {
                 // 跳过空池（如果设置了不包含）
-                if (!includeEmptyPools && report.PoolInfo.AcquirePoolableCount == 0 &&
-                    report.PoolInfo.UnusedPoolableCount == 0 && report.PoolInfo.UsedPoolableCount == 0)
+                if (!includeEmptyPools && report.PoolInfo is
+                        { AcquirePoolableCount: 0, UnusedPoolableCount: 0, UsedPoolableCount: 0 })
                     continue;
 
                 sb.AppendLine($"┌─ {report.PoolType.Name} ─────────────────────");
@@ -182,16 +182,16 @@ namespace MonsterCache.Runtime
             foreach (var report in reports)
             {
                 var typeName = report.PoolType.Name;
-                if (typeName.Length > 19) typeName = typeName.Substring(0, 16) + "...";
+                if (typeName.Length > 19) typeName = typeName[..16] + "...";
 
-                var problemCount = report.Issues.Where(i => i.Severity >= 7).Count();
+                var problemCount = report.Issues.Count(i => i.Severity >= 7);
                 var problemIcon = problemCount > 0 ? $"{problemCount}⚠" : "✓";
 
-                sb.AppendLine($"{typeName.PadRight(20)}" +
-                              $"{report.PoolInfo.UnusedPoolableCount.ToString().PadLeft(6)}" +
-                              $"{report.PoolInfo.UsedPoolableCount.ToString().PadLeft(6)}" +
-                              $"{report.Metrics.PoolEfficiency.ToString("P0").PadLeft(8)}" +
-                              $"{problemIcon.PadLeft(6)}");
+                sb.AppendLine($"{typeName,-20}" +
+                              $"{report.PoolInfo.UnusedPoolableCount.ToString(),6}" +
+                              $"{report.PoolInfo.UsedPoolableCount.ToString(),6}" +
+                              $"{report.Metrics.PoolEfficiency,8:P0}" +
+                              $"{problemIcon,6}");
             }
 
             return sb.ToString();
