@@ -6,7 +6,7 @@ namespace MonsterCache.Runtime
     /// <summary>
     /// 单一类型的对象池实现
     /// </summary>
-    public class CachePool
+    public class ObjectPool
     {
         private readonly Queue<IPoolable> poolables;
         private readonly Type poolType;
@@ -20,7 +20,7 @@ namespace MonsterCache.Runtime
         /// 初始化指定类型的对象池
         /// </summary>
         /// <param name="poolType">池化对象类型</param>
-        public CachePool(Type poolType)
+        public ObjectPool(Type poolType)
         {
             poolables = new Queue<IPoolable>();
             this.poolType = poolType;
@@ -34,22 +34,34 @@ namespace MonsterCache.Runtime
         /// <summary>池化对象类型</summary>
         public Type PoolType => poolType;
 
-        /// <summary>池中空闲对象数量</summary>
+        /// <summary>
+        /// 当前池中空闲对象数量
+        /// </summary>
         public int UnusedPoolableCount => poolables.Count;
 
-        /// <summary>当前正在使用的对象数量</summary>
+        /// <summary>
+        /// 当前正在使用的对象数量
+        /// </summary>
         public int UsedPoolableCount => usedPoolableCount;
 
-        /// <summary>累计获取对象次数</summary>
+        /// <summary>
+        /// 累计获取对象次数
+        /// </summary>
         public int AcquirePoolableCount => acquirePoolableCount;
 
-        /// <summary>累计归还对象次数</summary>
+        /// <summary>
+        /// 累计归还对象次数
+        /// </summary>
         public int ReleasePoolableCount => releasePoolableCount;
 
-        /// <summary>累计创建新对象次数</summary>
+        /// <summary>
+        /// 累计创建新对象次数
+        /// </summary>
         public int AddPoolableCount => addPoolableCount;
 
-        /// <summary>累计销毁对象次数</summary>
+        /// <summary>
+        /// 累计销毁对象次数
+        /// </summary>
         public int RemovePoolableCount => removePoolableCount;
 
         /// <summary>
@@ -86,6 +98,7 @@ namespace MonsterCache.Runtime
         {
             usedPoolableCount++;
             acquirePoolableCount++;
+
             lock (poolables)
             {
                 if (poolables.Count > 0)
@@ -110,9 +123,9 @@ namespace MonsterCache.Runtime
             if (poolable == null)
                 throw new ArgumentNullException(nameof(poolable));
 
-            if (poolable.GetType() != this.poolType)
+            if (poolable.GetType() != poolType)
                 throw new ArgumentException(
-                    $"Type {poolable.GetType()} does not match the {this.poolType} type");
+                    $"Type {poolable.GetType()} does not match the {poolType} type");
 
             poolable.OnReturnToPool();
             lock (poolables)
@@ -141,7 +154,7 @@ namespace MonsterCache.Runtime
 
             lock (poolables)
             {
-                for (int i = 0; i < count; i++)
+                for (var i = 0; i < count; i++)
                 {
                     var instance = (IPoolable)Activator.CreateInstance(poolType);
                     poolables.Enqueue(instance);

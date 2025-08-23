@@ -64,7 +64,7 @@ namespace MonsterCache.Runtime
         public readonly Type PoolType;
 
         /// <summary>基础统计信息</summary>
-        public readonly CachePoolInfo PoolInfo;
+        public readonly ObjectPoolInfo PoolInfo;
 
         /// <summary>计算出的性能指标</summary>
         public readonly PoolMetrics Metrics;
@@ -72,7 +72,7 @@ namespace MonsterCache.Runtime
         /// <summary>发现的问题列表</summary>
         public readonly PoolIssue[] Issues;
 
-        public PoolAnalysisReport(Type poolType, CachePoolInfo poolInfo, PoolMetrics metrics, PoolIssue[] issues)
+        public PoolAnalysisReport(Type poolType, ObjectPoolInfo poolInfo, PoolMetrics metrics, PoolIssue[] issues)
         {
             PoolType = poolType;
             PoolInfo = poolInfo;

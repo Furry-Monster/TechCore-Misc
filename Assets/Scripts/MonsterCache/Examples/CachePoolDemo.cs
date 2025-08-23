@@ -244,7 +244,7 @@ namespace MonsterCache.Examples
         {
             Console.WriteLine("演示完成统计:");
 
-            var poolInfos = CachePoolMgr.GetAllPoolInfos();
+            var poolInfos = ObjectPoolMgr.GetAllPoolInfos();
             Console.WriteLine($"  创建的对象池类型: {poolInfos.Length} 种");
 
             var totalAcquires = 0;
@@ -291,7 +291,7 @@ namespace MonsterCache.Examples
             Console.WriteLine("📋 当前系统状态报告");
             Console.WriteLine("-".PadRight(30, '-'));
 
-            var report = CachePoolMgr.GeneratePerformanceReport();
+            var report = ObjectPoolMgr.GeneratePerformanceReport();
             Console.WriteLine(report);
 
             var consoleReport = PoolDebugger.GenerateConsoleReport();
@@ -328,7 +328,7 @@ namespace MonsterCache.Examples
                 var autoOptimize = Console.ReadLine()?.ToLower();
                 if (autoOptimize == "y" || autoOptimize == "yes")
                 {
-                    var optimizedCount = CachePoolMgr.AutoOptimize();
+                    var optimizedCount = ObjectPoolMgr.AutoOptimize();
                     Console.WriteLine($"✅ 应用了 {optimizedCount} 个优化");
 
                     var newHealth = PoolDebugger.PerformHealthCheck();
@@ -345,12 +345,12 @@ namespace MonsterCache.Examples
             Console.WriteLine("🧹 清理所有对象池");
             Console.WriteLine("-".PadRight(20, '-'));
 
-            var poolInfos = CachePoolMgr.GetAllPoolInfos();
+            var poolInfos = ObjectPoolMgr.GetAllPoolInfos();
             Console.WriteLine($"清理前: {poolInfos.Length} 个对象池");
 
-            CachePoolMgr.Clear();
+            ObjectPoolMgr.Clear();
 
-            var newPoolInfos = CachePoolMgr.GetAllPoolInfos();
+            var newPoolInfos = ObjectPoolMgr.GetAllPoolInfos();
             Console.WriteLine($"清理后: {newPoolInfos.Length} 个对象池");
             Console.WriteLine("✅ 清理完成");
         }

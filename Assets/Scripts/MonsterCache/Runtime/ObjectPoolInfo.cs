@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 namespace MonsterCache.Runtime
 {
     [StructLayout(LayoutKind.Auto)]
-    public readonly struct CachePoolInfo
+    public readonly struct ObjectPoolInfo
     {
         private readonly Type poolType;
         private readonly int unusedPoolableCount;
@@ -26,7 +26,7 @@ namespace MonsterCache.Runtime
         /// <param name="releasePoolableCount">累计归还对象次数。</param>
         /// <param name="addPoolableCount">累计创建新对象次数。</param>
         /// <param name="removePoolableCount">累计销毁对象次数。</param>
-        public CachePoolInfo(Type poolType, int unusedPoolableCount, int usedPoolableCount, int acquirePoolableCount,
+        public ObjectPoolInfo(Type poolType, int unusedPoolableCount, int usedPoolableCount, int acquirePoolableCount,
             int releasePoolableCount, int addPoolableCount, int removePoolableCount)
         {
             this.poolType = poolType;

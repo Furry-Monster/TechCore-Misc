@@ -20,18 +20,18 @@ namespace MonsterCache.Examples
             Console.WriteLine("1. 基本获取和归还操作:");
 
             // 获取子弹对象
-            var bullet1 = CachePoolMgr.Acquire<Bullet>();
+            var bullet1 = ObjectPoolMgr.Acquire<Bullet>();
             bullet1.Initialize(100, 200, 10, 5, 25.0f);
             Console.WriteLine($"获取子弹: 位置({bullet1.X}, {bullet1.Y}), 伤害:{bullet1.Damage}");
 
             // 归还子弹
-            CachePoolMgr.Release(bullet1);
+            ObjectPoolMgr.Release(bullet1);
             Console.WriteLine("子弹已归还到池中");
 
             // 再次获取，应该是同一个对象（已被重置）
-            var bullet2 = CachePoolMgr.Acquire<Bullet>();
+            var bullet2 = ObjectPoolMgr.Acquire<Bullet>();
             Console.WriteLine($"再次获取子弹: 位置({bullet2.X}, {bullet2.Y}) - 应该是重置状态");
-            CachePoolMgr.Release(bullet2);
+            ObjectPoolMgr.Release(bullet2);
 
             Console.WriteLine();
 
@@ -43,7 +43,7 @@ namespace MonsterCache.Examples
             // 创建10个子弹
             for (int i = 0; i < 10; i++)
             {
-                var bullet = CachePoolMgr.Acquire<Bullet>();
+                var bullet = ObjectPoolMgr.Acquire<Bullet>();
                 bullet.Initialize(i * 10, i * 20, 5, 2, 10.0f);
                 bullets.Add(bullet);
             }
@@ -61,7 +61,7 @@ namespace MonsterCache.Examples
                     if (!bullets[i].IsActive)
                     {
                         Console.WriteLine($"  子弹 {i} 超出边界，归还到池中");
-                        CachePoolMgr.Release(bullets[i]);
+                        ObjectPoolMgr.Release(bullets[i]);
                         bullets.RemoveAt(i);
                     }
                 }
@@ -70,7 +70,7 @@ namespace MonsterCache.Examples
             // 清理剩余子弹
             foreach (var bullet in bullets)
             {
-                CachePoolMgr.Release(bullet);
+                ObjectPoolMgr.Release(bullet);
             }
 
             Console.WriteLine("剩余子弹全部归还");
@@ -80,17 +80,17 @@ namespace MonsterCache.Examples
             // 3. 不同类型对象演示
             Console.WriteLine("3. 多种对象类型演示:");
 
-            var effect = CachePoolMgr.Acquire<ParticleEffect>();
+            var effect = ObjectPoolMgr.Acquire<ParticleEffect>();
             effect.Play("Explosion", 2.0f);
             Console.WriteLine($"播放特效: {effect.EffectName}, 持续时间: {effect.Duration}秒");
 
-            var message = CachePoolMgr.Acquire<GameMessage>();
+            var message = ObjectPoolMgr.Acquire<GameMessage>();
             message.SetMessage("玩家获得金币!", 1);
             Console.WriteLine($"创建消息: {message.Content}, 优先级: {message.Priority}");
 
             // 归还对象
-            CachePoolMgr.Release(effect);
-            CachePoolMgr.Release(message);
+            ObjectPoolMgr.Release(effect);
+            ObjectPoolMgr.Release(message);
             Console.WriteLine("特效和消息已归还");
 
             Console.WriteLine();
@@ -106,12 +106,12 @@ namespace MonsterCache.Examples
             // 1. 预分配对象
             Console.WriteLine("1. 预分配演示:");
             Console.WriteLine("预分配20个Bullet对象...");
-            CachePoolMgr.Expand<Bullet>(20);
+            ObjectPoolMgr.Expand<Bullet>(20);
 
             Console.WriteLine("预分配10个HeavyObject对象...");
-            CachePoolMgr.Expand<HeavyObject>(10);
+            ObjectPoolMgr.Expand<HeavyObject>(10);
 
-            var poolInfos = CachePoolMgr.GetAllPoolInfos();
+            var poolInfos = ObjectPoolMgr.GetAllPoolInfos();
             foreach (var info in poolInfos)
             {
                 Console.WriteLine($"{info.PoolType.Name}: 空闲={info.UnusedPoolableCount}, 使用={info.UsedPoolableCount}");
@@ -139,7 +139,7 @@ namespace MonsterCache.Examples
             var heavyObjects = new List<HeavyObject>();
             for (int i = 0; i < 1000; i++)
             {
-                var obj = CachePoolMgr.Acquire<HeavyObject>();
+                var obj = ObjectPoolMgr.Acquire<HeavyObject>();
                 obj.ProcessData($"Data {i}");
                 heavyObjects.Add(obj);
             }
@@ -147,7 +147,7 @@ namespace MonsterCache.Examples
             // 归还对象
             foreach (var obj in heavyObjects)
             {
-                CachePoolMgr.Release(obj);
+                ObjectPoolMgr.Release(obj);
             }
 
             var timeWithPool = DateTime.Now - start;
@@ -169,13 +169,13 @@ namespace MonsterCache.Examples
             {
                 // 1. 重复归还同一对象
                 Console.WriteLine("1. 测试重复归还对象:");
-                var bullet = CachePoolMgr.Acquire<Bullet>();
-                CachePoolMgr.Release(bullet);
+                var bullet = ObjectPoolMgr.Acquire<Bullet>();
+                ObjectPoolMgr.Release(bullet);
                 Console.WriteLine("第一次归还成功");
 
                 try
                 {
-                    CachePoolMgr.Release(bullet); // 这应该抛出异常
+                    ObjectPoolMgr.Release(bullet); // 这应该抛出异常
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -186,7 +186,7 @@ namespace MonsterCache.Examples
                 Console.WriteLine("\n2. 测试归还null对象:");
                 try
                 {
-                    CachePoolMgr.Release(null);
+                    ObjectPoolMgr.Release(null);
                 }
                 catch (ArgumentNullException ex)
                 {
@@ -197,7 +197,7 @@ namespace MonsterCache.Examples
                 Console.WriteLine("\n3. 测试无效扩容参数:");
                 try
                 {
-                    CachePoolMgr.Expand<Bullet>(-5);
+                    ObjectPoolMgr.Expand<Bullet>(-5);
                 }
                 catch (ArgumentOutOfRangeException ex)
                 {
@@ -226,7 +226,7 @@ namespace MonsterCache.Examples
             // 创建一些消息
             for (int i = 0; i < 5; i++)
             {
-                var message = CachePoolMgr.Acquire<GameMessage>();
+                var message = ObjectPoolMgr.Acquire<GameMessage>();
                 message.SetMessage($"消息 {i + 1}", i);
                 activeMessages.Add(message);
                 Console.WriteLine($"创建消息: {message.Content}");
@@ -248,7 +248,7 @@ namespace MonsterCache.Examples
                 if (activeMessages[i].IsExpired(maxAge))
                 {
                     Console.WriteLine($"消息过期，归还: {activeMessages[i].Content}");
-                    CachePoolMgr.Release(activeMessages[i]);
+                    ObjectPoolMgr.Release(activeMessages[i]);
                     activeMessages.RemoveAt(i);
                 }
             }
@@ -257,7 +257,7 @@ namespace MonsterCache.Examples
             foreach (var message in activeMessages)
             {
                 Console.WriteLine($"清理剩余消息: {message.Content}");
-                CachePoolMgr.Release(message);
+                ObjectPoolMgr.Release(message);
             }
 
             Console.WriteLine();
@@ -270,7 +270,7 @@ namespace MonsterCache.Examples
             string[] effectNames = { "火花", "爆炸", "治愈光环", "冰冻效果" };
             for (int i = 0; i < effectNames.Length; i++)
             {
-                var effect = CachePoolMgr.Acquire<ParticleEffect>();
+                var effect = ObjectPoolMgr.Acquire<ParticleEffect>();
                 effect.Play(effectNames[i], 0.5f + i * 0.2f);
                 activeEffects.Add(effect);
                 Console.WriteLine($"播放特效: {effect.EffectName}, 持续: {effect.Duration:F1}秒");
@@ -291,7 +291,7 @@ namespace MonsterCache.Examples
                     if (!activeEffects[i].IsPlaying)
                     {
                         Console.WriteLine($"  特效结束: {activeEffects[i].EffectName}");
-                        CachePoolMgr.Release(activeEffects[i]);
+                        ObjectPoolMgr.Release(activeEffects[i]);
                         activeEffects.RemoveAt(i);
                     }
                 }

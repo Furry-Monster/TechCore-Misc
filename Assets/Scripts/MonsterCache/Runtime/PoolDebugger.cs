@@ -78,7 +78,7 @@ namespace MonsterCache.Runtime
         /// <returns>详细状态报告</returns>
         public static string GenerateDetailedReport(bool includeEmptyPools = false)
         {
-            var reports = CachePoolMgr.AnalyzeAllPools();
+            var reports = ObjectPoolMgr.AnalyzeAllPools();
             var sb = new StringBuilder();
 
             sb.AppendLine("═══════════════════════════════════════════════");
@@ -166,7 +166,7 @@ namespace MonsterCache.Runtime
         /// <returns>简化报告</returns>
         public static string GenerateConsoleReport()
         {
-            var reports = CachePoolMgr.AnalyzeAllPools()
+            var reports = ObjectPoolMgr.AnalyzeAllPools()
                 .Where(r => r.PoolInfo.AcquirePoolableCount > 0 || r.PoolInfo.UsedPoolableCount > 0)
                 .OrderByDescending(r => r.PoolInfo.AcquirePoolableCount)
                 .ToArray();
@@ -205,7 +205,7 @@ namespace MonsterCache.Runtime
             if (_enableDebugLogging)
             {
                 // 订阅池事件
-                CachePoolMgr.OnPoolEvent += OnPoolEvent;
+                ObjectPoolMgr.OnPoolEvent += OnPoolEvent;
                 Log("对象池监控已启动");
             }
         }
@@ -215,7 +215,7 @@ namespace MonsterCache.Runtime
         /// </summary>
         public static void StopMonitoring()
         {
-            CachePoolMgr.OnPoolEvent -= OnPoolEvent;
+            ObjectPoolMgr.OnPoolEvent -= OnPoolEvent;
             Log("对象池监控已停止");
         }
 
@@ -225,8 +225,8 @@ namespace MonsterCache.Runtime
         /// <returns>健康检查结果</returns>
         public static PoolHealthCheckResult PerformHealthCheck()
         {
-            var reports = CachePoolMgr.AnalyzeAllPools();
-            var memoryLeaks = CachePoolMgr.DetectMemoryLeaks();
+            var reports = ObjectPoolMgr.AnalyzeAllPools();
+            var memoryLeaks = ObjectPoolMgr.DetectMemoryLeaks();
 
             var result = new PoolHealthCheckResult
             {

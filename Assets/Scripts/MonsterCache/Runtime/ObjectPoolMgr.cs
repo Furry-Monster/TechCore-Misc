@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace MonsterCache.Runtime
 {
-    public static class CachePoolMgr
+    public static class ObjectPoolMgr
     {
-        private static readonly Dictionary<Type, CachePool> cachePoolDict = new();
+        private static readonly Dictionary<Type, ObjectPool> cachePoolDict = new();
 
         /// <summary>性能监控事件</summary>
         public static event PoolEventHandler OnPoolEvent;
@@ -28,17 +28,17 @@ namespace MonsterCache.Runtime
         /// 获取所有对象池的统计信息
         /// </summary>
         /// <returns>对象池信息数组</returns>
-        public static CachePoolInfo[] GetAllPoolInfos()
+        public static ObjectPoolInfo[] GetAllPoolInfos()
         {
             var index = 0;
-            CachePoolInfo[] result;
+            ObjectPoolInfo[] result;
 
             lock (cachePoolDict)
             {
-                result = new CachePoolInfo[cachePoolDict.Count];
+                result = new ObjectPoolInfo[cachePoolDict.Count];
                 foreach (var cacheItem in cachePoolDict)
                 {
-                    result[index++] = new CachePoolInfo(cacheItem.Key, cacheItem.Value.UnusedPoolableCount,
+                    result[index++] = new ObjectPoolInfo(cacheItem.Key, cacheItem.Value.UnusedPoolableCount,
                         cacheItem.Value.UsedPoolableCount, cacheItem.Value.AcquirePoolableCount,
                         cacheItem.Value.ReleasePoolableCount, cacheItem.Value.AddPoolableCount,
                         cacheItem.Value.RemovePoolableCount);
@@ -157,23 +157,23 @@ namespace MonsterCache.Runtime
         /// <param name="cachedType">对象类型</param>
         /// <returns>对象池实例</returns>
         /// <exception cref="ArgumentNullException">对象类型不能为空</exception>
-        private static CachePool GetCache(Type cachedType)
+        private static ObjectPool GetCache(Type cachedType)
         {
             if (cachedType == null)
                 throw new ArgumentNullException(nameof(cachedType));
 
-            CachePool cachePool;
+            ObjectPool objectPool;
             lock (cachePoolDict)
             {
-                if (!cachePoolDict.TryGetValue(cachedType, out cachePool))
+                if (!cachePoolDict.TryGetValue(cachedType, out objectPool))
                 {
-                    cachePool = new CachePool(cachedType);
-                    cachePoolDict.Add(cachedType, cachePool);
+                    objectPool = new ObjectPool(cachedType);
+                    cachePoolDict.Add(cachedType, objectPool);
                     TriggerEvent(cachedType, "PoolCreated", null);
                 }
             }
 
-            return cachePool;
+            return objectPool;
         }
 
         #region 性能分析和调试功能
@@ -193,7 +193,7 @@ namespace MonsterCache.Runtime
                         new PoolIssue(PoolIssueType.LowUsage, 1, "对象池未被使用", "考虑移除或延迟初始化")
                     });
 
-                var info = new CachePoolInfo(poolType, pool.UnusedPoolableCount, pool.UsedPoolableCount,
+                var info = new ObjectPoolInfo(poolType, pool.UnusedPoolableCount, pool.UsedPoolableCount,
                     pool.AcquirePoolableCount, pool.ReleasePoolableCount, pool.AddPoolableCount,
                     pool.RemovePoolableCount);
 
@@ -342,7 +342,7 @@ namespace MonsterCache.Runtime
         /// <summary>
         /// 计算对象池性能指标
         /// </summary>
-        private static PoolMetrics CalculateMetrics(CachePoolInfo info)
+        private static PoolMetrics CalculateMetrics(ObjectPoolInfo info)
         {
             var totalOperations = info.AcquirePoolableCount + info.ReleasePoolableCount;
             if (totalOperations == 0)
@@ -375,7 +375,7 @@ namespace MonsterCache.Runtime
         /// <summary>
         /// 检测对象池问题
         /// </summary>
-        private static PoolIssue[] DetectIssues(CachePoolInfo info, PoolMetrics metrics)
+        private static PoolIssue[] DetectIssues(ObjectPoolInfo info, PoolMetrics metrics)
         {
             var issues = new List<PoolIssue>();
 

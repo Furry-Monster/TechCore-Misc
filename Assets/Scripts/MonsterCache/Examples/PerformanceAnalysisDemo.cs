@@ -23,11 +23,11 @@ namespace MonsterCache.Examples
             SimulatePoolUsage();
 
             Console.WriteLine("\n2. 分析单个对象池:");
-            var bulletReport = CachePoolMgr.AnalyzePool(typeof(Bullet));
+            var bulletReport = ObjectPoolMgr.AnalyzePool(typeof(Bullet));
             PrintPoolReport(bulletReport);
 
             Console.WriteLine("\n3. 生成性能报告摘要:");
-            var report = CachePoolMgr.GeneratePerformanceReport();
+            var report = ObjectPoolMgr.GeneratePerformanceReport();
             Console.WriteLine(report);
         }
 
@@ -42,30 +42,30 @@ namespace MonsterCache.Examples
             var bullets = new List<Bullet>();
             for (int i = 0; i < 50; i++)
             {
-                var bullet = CachePoolMgr.Acquire<Bullet>();
+                var bullet = ObjectPoolMgr.Acquire<Bullet>();
                 bullets.Add(bullet);
             }
 
             // 正常归还所有对象
             foreach (var bullet in bullets)
             {
-                CachePoolMgr.Release(bullet);
+                ObjectPoolMgr.Release(bullet);
             }
 
             bullets.Clear();
 
-            var leaks1 = CachePoolMgr.DetectMemoryLeaks();
+            var leaks1 = ObjectPoolMgr.DetectMemoryLeaks();
             Console.WriteLine($"检测到内存泄漏: {leaks1.Length} 个");
 
             Console.WriteLine("\n2. 模拟内存泄漏（忘记归还对象）:");
             for (int i = 0; i < 30; i++)
             {
                 // ReSharper disable once UnusedVariable
-                var bullet = CachePoolMgr.Acquire<Bullet>(); // 获取但不归还
+                var bullet = ObjectPoolMgr.Acquire<Bullet>(); // 获取但不归还
                 // 故意不归还，模拟泄漏
             }
 
-            var leaks2 = CachePoolMgr.DetectMemoryLeaks();
+            var leaks2 = ObjectPoolMgr.DetectMemoryLeaks();
             Console.WriteLine($"检测到内存泄漏: {leaks2.Length} 个");
 
             if (leaks2.Length > 0)
@@ -92,23 +92,23 @@ namespace MonsterCache.Examples
             // 模拟池过小的情况 - 频繁创建新对象
             for (int i = 0; i < 100; i++)
             {
-                var heavy = CachePoolMgr.Acquire<HeavyObject>();
+                var heavy = ObjectPoolMgr.Acquire<HeavyObject>();
                 heavy.ProcessData($"Data {i}");
                 // 立即归还，但因为池小，下次又要创建新的
-                CachePoolMgr.Release(heavy);
+                ObjectPoolMgr.Release(heavy);
             }
 
             // 模拟池过大的情况 - 预分配过多但很少使用
-            CachePoolMgr.Expand<ParticleEffect>(100);
+            ObjectPoolMgr.Expand<ParticleEffect>(100);
             for (int i = 0; i < 5; i++) // 只使用很少的几个
             {
-                var effect = CachePoolMgr.Acquire<ParticleEffect>();
+                var effect = ObjectPoolMgr.Acquire<ParticleEffect>();
                 effect.Play($"Effect {i}", 1.0f);
-                CachePoolMgr.Release(effect);
+                ObjectPoolMgr.Release(effect);
             }
 
             Console.WriteLine("\n2. 分析所有对象池的问题:");
-            var reports = CachePoolMgr.AnalyzeAllPools();
+            var reports = ObjectPoolMgr.AnalyzeAllPools();
 
             foreach (var report in reports)
             {
@@ -137,7 +137,7 @@ namespace MonsterCache.Examples
             PrintPoolSummary();
 
             Console.WriteLine("\n2. 执行自动优化...");
-            int optimizationCount = CachePoolMgr.AutoOptimize(applyHighPriorityOnly: true);
+            int optimizationCount = ObjectPoolMgr.AutoOptimize(applyHighPriorityOnly: true);
             Console.WriteLine($"应用了 {optimizationCount} 个优化");
 
             Console.WriteLine("\n3. 优化后的状态:");
@@ -146,7 +146,7 @@ namespace MonsterCache.Examples
             if (optimizationCount > 0)
             {
                 Console.WriteLine("\n4. 验证优化效果:");
-                var reports = CachePoolMgr.AnalyzeAllPools();
+                var reports = ObjectPoolMgr.AnalyzeAllPools();
                 var remainingHighPriorityIssues = reports
                     .SelectMany(r => r.Issues)
                     .Where(i => i.Severity >= 7)
@@ -167,18 +167,18 @@ namespace MonsterCache.Examples
             Console.WriteLine("1. 创建多样化的使用模式...");
 
             // 高效使用模式
-            CachePoolMgr.Expand<Bullet>(50); // 预分配
+            ObjectPoolMgr.Expand<Bullet>(50); // 预分配
             var bullets = new List<Bullet>();
             for (int i = 0; i < 200; i++)
             {
-                var bullet = CachePoolMgr.Acquire<Bullet>();
+                var bullet = ObjectPoolMgr.Acquire<Bullet>();
                 bullets.Add(bullet);
                 if (i % 10 == 0) // 定期归还一些
                 {
                     var toReturn = bullets.Take(5).ToArray();
                     foreach (var b in toReturn)
                     {
-                        CachePoolMgr.Release(b);
+                        ObjectPoolMgr.Release(b);
                         bullets.Remove(b);
                     }
                 }
@@ -187,18 +187,18 @@ namespace MonsterCache.Examples
             // 归还剩余的
             foreach (var bullet in bullets)
             {
-                CachePoolMgr.Release(bullet);
+                ObjectPoolMgr.Release(bullet);
             }
 
             // 低效使用模式
             for (int i = 0; i < 50; i++)
             {
-                var message = CachePoolMgr.Acquire<GameMessage>(); // 小池，频繁分配
-                CachePoolMgr.Release(message);
+                var message = ObjectPoolMgr.Acquire<GameMessage>(); // 小池，频繁分配
+                ObjectPoolMgr.Release(message);
             }
 
             Console.WriteLine("\n2. 详细性能指标:");
-            var allReports = CachePoolMgr.AnalyzeAllPools();
+            var allReports = ObjectPoolMgr.AnalyzeAllPools();
 
             foreach (var report in allReports.Where(r => r.PoolInfo.AcquirePoolableCount > 0))
             {
@@ -245,7 +245,7 @@ namespace MonsterCache.Examples
             // 启用事件监控
             Console.WriteLine("1. 启用性能监控...");
             var eventLog = new List<string>();
-            CachePoolMgr.OnPoolEvent += (poolType, args) =>
+            ObjectPoolMgr.OnPoolEvent += (poolType, args) =>
             {
                 var eventMsg = $"{DateTime.Now:HH:mm:ss.fff} - {poolType.Name}: {args.EventType}";
                 if (args.Data.Count > 0)
@@ -268,13 +268,13 @@ namespace MonsterCache.Examples
                 var bullets = new List<Bullet>();
                 for (int j = 0; j < 10; j++)
                 {
-                    bullets.Add(CachePoolMgr.Acquire<Bullet>());
+                    bullets.Add(ObjectPoolMgr.Acquire<Bullet>());
                 }
 
                 // 归还对象
                 foreach (var bullet in bullets)
                 {
-                    CachePoolMgr.Release(bullet);
+                    ObjectPoolMgr.Release(bullet);
                 }
 
                 System.Threading.Thread.Sleep(100);
@@ -282,7 +282,7 @@ namespace MonsterCache.Examples
 
             // 执行自动优化来触发更多事件
             Console.WriteLine("\n3. 执行自动优化...");
-            CachePoolMgr.AutoOptimize();
+            ObjectPoolMgr.AutoOptimize();
 
             Console.WriteLine($"\n4. 监控总结:");
             Console.WriteLine($"总共捕获了 {eventLog.Count} 个事件");
@@ -305,14 +305,14 @@ namespace MonsterCache.Examples
         private static void SimulatePoolUsage()
         {
             // 预分配一些对象
-            CachePoolMgr.Expand<Bullet>(20);
-            CachePoolMgr.Expand<ParticleEffect>(10);
+            ObjectPoolMgr.Expand<Bullet>(20);
+            ObjectPoolMgr.Expand<ParticleEffect>(10);
 
             // 使用 Bullet 对象池
             var bullets = new List<Bullet>();
             for (int i = 0; i < 100; i++)
             {
-                var bullet = CachePoolMgr.Acquire<Bullet>();
+                var bullet = ObjectPoolMgr.Acquire<Bullet>();
                 bullets.Add(bullet);
 
                 // 随机归还一些对象
@@ -320,7 +320,7 @@ namespace MonsterCache.Examples
                 {
                     var toReturn = bullets[0];
                     bullets.RemoveAt(0);
-                    CachePoolMgr.Release(toReturn);
+                    ObjectPoolMgr.Release(toReturn);
                 }
             }
 
@@ -328,22 +328,22 @@ namespace MonsterCache.Examples
             var bulletsToReturn = bullets.Take(bullets.Count * 2 / 3).ToArray();
             foreach (var bullet in bulletsToReturn)
             {
-                CachePoolMgr.Release(bullet);
+                ObjectPoolMgr.Release(bullet);
                 bullets.Remove(bullet);
             }
 
             // 使用 ParticleEffect 对象池
             for (int i = 0; i < 30; i++)
             {
-                var effect = CachePoolMgr.Acquire<ParticleEffect>();
-                CachePoolMgr.Release(effect);
+                var effect = ObjectPoolMgr.Acquire<ParticleEffect>();
+                ObjectPoolMgr.Release(effect);
             }
 
             // 使用 HeavyObject（创建成本高）
             for (int i = 0; i < 5; i++)
             {
-                var heavy = CachePoolMgr.Acquire<HeavyObject>();
-                CachePoolMgr.Release(heavy);
+                var heavy = ObjectPoolMgr.Acquire<HeavyObject>();
+                ObjectPoolMgr.Release(heavy);
             }
         }
 
@@ -379,7 +379,7 @@ namespace MonsterCache.Examples
         /// </summary>
         private static void PrintPoolSummary()
         {
-            var poolInfos = CachePoolMgr.GetAllPoolInfos();
+            var poolInfos = ObjectPoolMgr.GetAllPoolInfos();
             Console.WriteLine("对象池状态摘要:");
             Console.WriteLine("类型".PadRight(15) + "空闲".PadLeft(8) + "使用".PadLeft(8) + "获取".PadLeft(8) +
                               "创建".PadLeft(8));
