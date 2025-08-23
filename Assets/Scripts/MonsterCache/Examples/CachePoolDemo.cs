@@ -1,5 +1,6 @@
 using System;
 using MonsterCache.Runtime;
+using MonsterCache.Runtime.Debug;
 
 namespace MonsterCache.Examples
 {

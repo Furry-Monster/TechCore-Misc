@@ -22,6 +22,9 @@ namespace MonsterCache.Runtime
         /// <param name="poolType">池化对象类型</param>
         public ObjectPool(Type poolType)
         {
+            if (!typeof(IPoolable).IsAssignableFrom(poolType))
+                throw new ArgumentException($"{poolType} is not an IPoolable");
+
             poolables = new Queue<IPoolable>();
             this.poolType = poolType;
             usedPoolableCount = 0;
@@ -111,6 +114,30 @@ namespace MonsterCache.Runtime
             return (IPoolable)Activator.CreateInstance(poolType);
         }
 
+        public void Release<T>(T poolable) where T : class, IPoolable
+        {
+            if (poolable == null)
+                throw new ArgumentNullException(nameof(poolable));
+
+            if (typeof(T) != poolType)
+                throw new ArgumentException($"Type {typeof(T)} does not match the {poolType} type");
+
+            poolable.OnReturnToPool();
+
+            lock (poolables)
+            {
+                if (poolables.Contains(poolable))
+                {
+                    throw new InvalidOperationException("Cache already released");
+                }
+
+                poolables.Enqueue(poolable);
+            }
+
+            releasePoolableCount++;
+            usedPoolableCount--;
+        }
+
         /// <summary>
         /// 将对象归还到对象池
         /// </summary>
@@ -124,10 +151,10 @@ namespace MonsterCache.Runtime
                 throw new ArgumentNullException(nameof(poolable));
 
             if (poolable.GetType() != poolType)
-                throw new ArgumentException(
-                    $"Type {poolable.GetType()} does not match the {poolType} type");
+                throw new ArgumentException($"Type {poolable.GetType()} does not match the {poolType} type");
 
             poolable.OnReturnToPool();
+
             lock (poolables)
             {
                 if (poolables.Contains(poolable))
@@ -140,6 +167,20 @@ namespace MonsterCache.Runtime
 
             releasePoolableCount++;
             usedPoolableCount--;
+        }
+
+
+        /// <summary>
+        /// 清空对象池中的所有空闲对象
+        /// </summary>
+        public void ReleaseAll()
+        {
+            lock (poolables)
+            {
+                var clearedCount = poolables.Count;
+                poolables.Clear();
+                removePoolableCount += clearedCount;
+            }
         }
 
         /// <summary>
@@ -176,24 +217,11 @@ namespace MonsterCache.Runtime
             lock (poolables)
             {
                 var actualRemoveCount = Math.Min(count, poolables.Count);
-                for (int i = 0; i < actualRemoveCount; i++)
+                for (var i = 0; i < actualRemoveCount; i++)
                 {
                     poolables.Dequeue();
                     removePoolableCount++;
                 }
-            }
-        }
-
-        /// <summary>
-        /// 清空对象池中的所有空闲对象
-        /// </summary>
-        public void ReleaseAll()
-        {
-            lock (poolables)
-            {
-                var clearedCount = poolables.Count;
-                poolables.Clear();
-                removePoolableCount += clearedCount;
             }
         }
     }

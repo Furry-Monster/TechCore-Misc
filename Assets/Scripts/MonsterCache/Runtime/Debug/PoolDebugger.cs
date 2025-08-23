@@ -3,24 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace MonsterCache.Runtime
+namespace MonsterCache.Runtime.Debug
 {
     /// <summary>
     /// 对象池调试器，提供友好的调试和监控功能
     /// </summary>
     public static class PoolDebugger
     {
-        private static readonly List<string> _debugLog = new();
-        private static bool _enableDebugLogging;
+        private static readonly List<string> debugLog = new();
 
         /// <summary>
         /// 是否启用调试日志记录
         /// </summary>
-        public static bool EnableDebugLogging
-        {
-            get => _enableDebugLogging;
-            set => _enableDebugLogging = value;
-        }
+        public static bool EnableDebugLogging { get; set; }
 
         /// <summary>
         /// 获取调试日志
@@ -29,12 +24,12 @@ namespace MonsterCache.Runtime
         /// <returns>调试日志数组</returns>
         public static string[] GetDebugLog(int maxLines = 100)
         {
-            lock (_debugLog)
+            lock (debugLog)
             {
-                if (maxLines == -1 || maxLines >= _debugLog.Count)
-                    return _debugLog.ToArray();
+                if (maxLines == -1 || maxLines >= debugLog.Count)
+                    return debugLog.ToArray();
 
-                return _debugLog.Skip(_debugLog.Count - maxLines).ToArray();
+                return debugLog.Skip(debugLog.Count - maxLines).ToArray();
             }
         }
 
@@ -43,9 +38,9 @@ namespace MonsterCache.Runtime
         /// </summary>
         public static void ClearDebugLog()
         {
-            lock (_debugLog)
+            lock (debugLog)
             {
-                _debugLog.Clear();
+                debugLog.Clear();
             }
         }
 
@@ -55,18 +50,17 @@ namespace MonsterCache.Runtime
         /// <param name="message">调试消息</param>
         public static void Log(string message)
         {
-            if (!_enableDebugLogging) return;
+            if (!EnableDebugLogging) return;
 
             var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
             var logEntry = $"[{timestamp}] {message}";
 
-            lock (_debugLog)
+            lock (debugLog)
             {
-                _debugLog.Add(logEntry);
-                // 限制日志数量，避免内存泄漏
-                if (_debugLog.Count > 1000)
+                debugLog.Add(logEntry);
+                if (debugLog.Count > 1000)
                 {
-                    _debugLog.RemoveRange(0, 200); // 删除前200条记录
+                    debugLog.RemoveRange(0, 200);
                 }
             }
         }
@@ -112,7 +106,6 @@ namespace MonsterCache.Runtime
 
             foreach (var report in sortedReports)
             {
-                // 跳过空池（如果设置了不包含）
                 if (!includeEmptyPools && report.PoolInfo is
                         { AcquirePoolableCount: 0, UnusedPoolableCount: 0, UsedPoolableCount: 0 })
                     continue;
@@ -202,7 +195,7 @@ namespace MonsterCache.Runtime
         /// </summary>
         public static void StartMonitoring()
         {
-            if (_enableDebugLogging)
+            if (EnableDebugLogging)
             {
                 // 订阅池事件
                 ObjectPoolMgr.OnPoolEvent += OnPoolEvent;
@@ -266,11 +259,8 @@ namespace MonsterCache.Runtime
             var totalScore = 0;
             foreach (var report in reports)
             {
-                var poolScore = 100;
-                foreach (var issue in report.Issues)
-                {
-                    poolScore -= issue.Severity;
-                }
+                var poolScore = report.Issues
+                    .Aggregate(100, (current, issue) => current - issue.Severity);
 
                 totalScore += Math.Max(0, poolScore);
             }
@@ -299,6 +289,14 @@ namespace MonsterCache.Runtime
                     case PoolIssueType.FrequentAllocation:
                         recommendations.Add($"{group.Count()} 个对象池频繁创建对象，考虑预热或扩容");
                         break;
+                    case PoolIssueType.PoolTooLarge:
+                        recommendations.Add($"{group.Count()} 个对象池过大，考虑缩小容量或及时清理");
+                        break;
+                    case PoolIssueType.LowUsage:
+                        recommendations.Add($"{group.Count()} 个对象池使用率较低，考虑移除对象池机制，改为手动控制");
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
             }
 
@@ -307,29 +305,5 @@ namespace MonsterCache.Runtime
 
             return recommendations.ToArray();
         }
-    }
-
-    /// <summary>
-    /// 对象池健康检查结果
-    /// </summary>
-    public struct PoolHealthCheckResult
-    {
-        /// <summary>总对象池数量</summary>
-        public int TotalPools { get; set; }
-
-        /// <summary>健康的对象池数量</summary>
-        public int HealthyPools { get; set; }
-
-        /// <summary>有问题的对象池数量</summary>
-        public int ProblematicPools { get; set; }
-
-        /// <summary>可能内存泄漏的对象池数量</summary>
-        public int MemoryLeakSuspects { get; set; }
-
-        /// <summary>总体健康度 (0-100)</summary>
-        public int OverallHealth { get; set; }
-
-        /// <summary>建议列表</summary>
-        public string[] Recommendations { get; set; }
     }
 }

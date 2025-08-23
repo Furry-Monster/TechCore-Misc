@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MonsterCache.Runtime;
+using MonsterCache.Runtime.Debug;
 using UnityEngine;
 
 namespace MonsterCache.Examples
