@@ -1,16 +1,19 @@
-using UnityEngine;
-using System.Text;
+using System.Collections.Generic;
 using MonsterCache.Runtime;
+using MonsterCache.Runtime.Debug;
+using UnityEngine;
 
 namespace MonsterCache.Examples
 {
-    public class ObjectPoolDemo : MonoBehaviour
+    public class AdvancedObjectPoolTest : MonoBehaviour
     {
-        [Header("Test Settings")] public int acquireCount = 10;
-        public int expandCount = 20;
-        public int shrinkCount = 10;
+        [Header("Test Settings")] [SerializeField]
+        public int acquireCount = 10;
 
-        private readonly StringBuilder logBuilder = new();
+        [SerializeField] public int expandCount = 20;
+        [SerializeField] public int shrinkCount = 10;
+
+        private readonly List<TestPoolableObject> objects = new();
         private int activeObjects;
         private int LogCnt;
 
@@ -20,10 +23,11 @@ namespace MonsterCache.Examples
 
             var startTime = Time.realtimeSinceStartup;
 
-            for (int i = 0; i < acquireCount; i++)
+            for (var i = 0; i < acquireCount; i++)
             {
                 var obj = ObjectPoolMgr.Acquire<TestPoolableObject>();
                 obj.Initialize($"Object_{activeObjects++}");
+                objects.Add(obj);
             }
 
             var elapsed = (Time.realtimeSinceStartup - startTime) * 1000f;
@@ -36,11 +40,15 @@ namespace MonsterCache.Examples
 
             var startTime = Time.realtimeSinceStartup;
 
-            // 模拟释放操作 - 在实际使用中，你需要保存对象引用来释放它们
-            for (int i = 0; i < Mathf.Min(10, activeObjects); i++)
+            for (var i = 0; i < Mathf.Min(10, activeObjects); i++)
             {
-                var obj = new TestPoolableObject();
-                obj.Initialize($"ReleaseTest_{i}");
+                if (objects.Count == 0)
+                {
+                    Log($"释放失败！还没有引用任何池中对象！");
+                }
+
+                var obj = objects[0];
+                objects.RemoveAt(0);
                 ObjectPoolMgr.Release(obj);
             }
 
@@ -82,21 +90,14 @@ namespace MonsterCache.Examples
             Log($"清空完成! 用时: {elapsed:F2}ms");
         }
 
-        private void Log(string message)
+        private static void Log(string message)
         {
-            logBuilder.AppendLine($"[{LogCnt++}][{Time.time:F1}s] {message}");
-
-            if (logBuilder.Length > 2000)
-            {
-                logBuilder.Remove(0, logBuilder.Length - 1500);
-            }
-
-            Debug.Log(logBuilder.ToString());
+            PoolDebugger.Log(message);
         }
 
         private void OnGUI()
         {
-            GUILayout.BeginArea(new Rect(10, 10, 400, 600));
+            GUILayout.BeginArea(new Rect(610, 10, 400, 600));
 
             GUILayout.Label("ObjectPool 性能监控", GUI.skin.label);
             GUILayout.Space(10);
@@ -113,24 +114,6 @@ namespace MonsterCache.Examples
             if (GUILayout.Button("清空所有池")) ClearPools();
 
             GUILayout.EndArea();
-        }
-    }
-
-    public class TestPoolableObject : IPoolable
-    {
-        public string Name { get; private set; }
-        public float CreatedTime { get; private set; }
-
-        public void Initialize(string name)
-        {
-            Name = name;
-            CreatedTime = Time.realtimeSinceStartup;
-        }
-
-        public void OnReturnToPool()
-        {
-            Name = null;
-            CreatedTime = 0f;
         }
     }
 }
