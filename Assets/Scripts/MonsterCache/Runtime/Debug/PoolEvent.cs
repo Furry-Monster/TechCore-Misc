@@ -13,10 +13,14 @@ namespace MonsterCache.Runtime.Debug
     /// </summary>
     public class PoolEventArgs : EventArgs
     {
-        /// <summary>事件类型</summary>
+        /// <summary>
+        /// 事件类型
+        /// </summary>
         public string EventType { get; set; }
 
-        /// <summary>事件数据</summary>
+        /// <summary>
+        /// 事件数据
+        /// </summary>
         public Dictionary<string, object> Data { get; set; }
 
         public PoolEventArgs(string eventType, Dictionary<string, object> data = null)

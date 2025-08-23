@@ -10,7 +10,10 @@ namespace MonsterCache.Runtime.Debug
     /// </summary>
     public static class PoolDebugger
     {
-        private static readonly List<string> debugLog = new();
+        /// <summary>
+        /// 日志缓冲区
+        /// </summary>
+        private static readonly List<string> logBuf = new();
 
         /// <summary>
         /// 是否启用调试日志记录
@@ -24,12 +27,12 @@ namespace MonsterCache.Runtime.Debug
         /// <returns>调试日志数组</returns>
         public static string[] GetDebugLog(int maxLines = 100)
         {
-            lock (debugLog)
+            lock (logBuf)
             {
-                if (maxLines == -1 || maxLines >= debugLog.Count)
-                    return debugLog.ToArray();
+                if (maxLines == -1 || maxLines >= logBuf.Count)
+                    return logBuf.ToArray();
 
-                return debugLog.Skip(debugLog.Count - maxLines).ToArray();
+                return logBuf.Skip(logBuf.Count - maxLines).ToArray();
             }
         }
 
@@ -38,9 +41,9 @@ namespace MonsterCache.Runtime.Debug
         /// </summary>
         public static void ClearDebugLog()
         {
-            lock (debugLog)
+            lock (logBuf)
             {
-                debugLog.Clear();
+                logBuf.Clear();
             }
         }
 
@@ -55,12 +58,12 @@ namespace MonsterCache.Runtime.Debug
             var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
             var logEntry = $"[{timestamp}] {message}";
 
-            lock (debugLog)
+            lock (logBuf)
             {
-                debugLog.Add(logEntry);
-                if (debugLog.Count > 1000)
+                logBuf.Add(logEntry);
+                if (logBuf.Count > 1000)
                 {
-                    debugLog.RemoveRange(0, 200);
+                    logBuf.RemoveRange(0, 200);
                 }
             }
         }
@@ -221,15 +224,16 @@ namespace MonsterCache.Runtime.Debug
             var reports = ObjectPoolMgr.AnalyzeAllPools();
             var memoryLeaks = ObjectPoolMgr.DetectMemoryLeaks();
 
-            var result = new PoolHealthCheckResult
-            {
-                TotalPools = reports.Length,
-                HealthyPools = reports.Count(r => r.Issues.Length == 0),
-                ProblematicPools = reports.Count(r => r.Issues.Any(i => i.Severity >= 7)),
-                MemoryLeakSuspects = memoryLeaks.Length,
-                OverallHealth = CalculateOverallHealth(reports),
-                Recommendations = GenerateRecommendations(reports)
-            };
+            var totalPools = reports.Length;
+            var healthPools = reports.Count(r => r.Issues.Length == 0);
+            var problematicPools = reports.Count(r => r.Issues.Any(i => i.Severity >= 7));
+            var memoryLeakSuspects = memoryLeaks.Length;
+            var overallHealth = CalculateOverallHealth(reports);
+            var recommendations = GenerateRecommendations(reports);
+            var result = new PoolHealthCheckResult(
+                totalPools, healthPools,
+                problematicPools, memoryLeakSuspects,
+                overallHealth, recommendations);
 
             Log($"健康检查完成 - 总体健康度: {result.OverallHealth}/100");
             return result;
@@ -256,14 +260,22 @@ namespace MonsterCache.Runtime.Debug
         {
             if (reports.Length == 0) return 100;
 
-            var totalScore = 0;
-            foreach (var report in reports)
-            {
-                var poolScore = report.Issues
-                    .Aggregate(100, (current, issue) => current - issue.Severity);
 
-                totalScore += Math.Max(0, poolScore);
-            }
+            // var totalScore = 0;
+            // foreach (var report in reports)
+            // {
+            //     var poolScore = report.Issues
+            //         .Aggregate(100, (current, issue) => current - issue.Severity);
+            //
+            //     totalScore += Math.Max(0, poolScore);
+            // } 
+
+            // NOTE: codes below equal to codes above
+
+            var totalScore = reports
+                .Select(report => report.Issues
+                    .Aggregate(100, (current, issue) => current - issue.Severity))
+                .Select(poolScore => Math.Max(0, poolScore)).Sum();
 
             return totalScore / reports.Length;
         }
@@ -271,10 +283,12 @@ namespace MonsterCache.Runtime.Debug
         private static string[] GenerateRecommendations(PoolAnalysisReport[] reports)
         {
             var recommendations = new List<string>();
-            var highPriorityIssues = reports.SelectMany(r => r.Issues)
-                .Where(i => i.Severity >= 7)
-                .GroupBy(i => i.IssueType)
-                .ToArray();
+            var highPriorityIssues =
+                reports
+                    .SelectMany(r => r.Issues)
+                    .Where(i => i.Severity >= 7)
+                    .GroupBy(i => i.IssueType)
+                    .ToArray();
 
             foreach (var group in highPriorityIssues)
             {
