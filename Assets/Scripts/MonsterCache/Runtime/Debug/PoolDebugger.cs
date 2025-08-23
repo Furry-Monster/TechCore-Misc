@@ -53,7 +53,8 @@ namespace MonsterCache.Runtime.Debug
         /// <param name="message">调试消息</param>
         public static void Log(string message)
         {
-            if (!EnableDebugLogging) return;
+            if (!EnableDebugLogging)
+                return;
 
             var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
             var logEntry = $"[{timestamp}] {message}";

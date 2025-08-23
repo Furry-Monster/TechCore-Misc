@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using MonsterCache.Runtime;
 using MonsterCache.Runtime.Debug;
@@ -12,10 +13,16 @@ namespace MonsterCache.Examples
 
         [SerializeField] public int expandCount = 20;
         [SerializeField] public int shrinkCount = 10;
+        [SerializeField] public int logCount = 200;
 
         private readonly List<TestPoolableObject> objects = new();
         private int activeObjects;
         private int LogCnt;
+
+        private void Start()
+        {
+            PoolDebugger.EnableDebugLogging = true;
+        }
 
         private void AcquireObjects()
         {
@@ -95,6 +102,12 @@ namespace MonsterCache.Examples
             PoolDebugger.Log(message);
         }
 
+        private void LogToUnity()
+        {
+            var logs = PoolDebugger.GetDebugLog(logCount);
+            Debug.Log(logs);
+        }
+
         private void OnGUI()
         {
             GUILayout.BeginArea(new Rect(610, 10, 400, 600));
@@ -112,6 +125,7 @@ namespace MonsterCache.Examples
             if (GUILayout.Button($"扩展池 {expandCount}")) ExpandPool();
             if (GUILayout.Button($"收缩池 {shrinkCount}")) ShrinkPool();
             if (GUILayout.Button("清空所有池")) ClearPools();
+            if (GUILayout.Button($"查看{logCount}条日志")) LogToUnity();
 
             GUILayout.EndArea();
         }
