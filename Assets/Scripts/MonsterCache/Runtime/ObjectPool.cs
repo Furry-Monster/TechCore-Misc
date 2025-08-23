@@ -83,6 +83,8 @@ namespace MonsterCache.Runtime
 
             lock (poolables)
             {
+                // NOTE: 每次Acquire/Release都要加锁，高并发下可能存在性能问题
+                // 但是暂时不进行优化，因为对于这个简单项目，我认为是必要的，后面的Release方法类同此处
                 if (poolables.Count > 0)
                 {
                     return (T)poolables.Dequeue();
@@ -112,6 +114,7 @@ namespace MonsterCache.Runtime
 
             addPoolableCount++;
             return (IPoolable)Activator.CreateInstance(poolType);
+            // NOTE: 这里直接使用反射创建较慢，或许可以用Factory来优化？
         }
 
         public void Release<T>(T poolable) where T : class, IPoolable
@@ -126,6 +129,7 @@ namespace MonsterCache.Runtime
 
             lock (poolables)
             {
+                // NOTE: _.Contains此处是O(n) 复杂度，或许可以优化，应该是个大工程？
                 if (poolables.Contains(poolable))
                 {
                     throw new InvalidOperationException("Cache already released");

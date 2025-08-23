@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using MonsterCache.Runtime.Debug;
 
 namespace MonsterCache.Runtime
@@ -133,6 +134,22 @@ namespace MonsterCache.Runtime
         }
 
         /// <summary>
+        /// 清空所有对象池
+        /// </summary>
+        public static void Clear()
+        {
+            lock (objectPoolDict)
+            {
+                foreach (var pool in objectPoolDict.Values)
+                {
+                    pool.ReleaseAll();
+                }
+
+                objectPoolDict.Clear();
+            }
+        }
+
+        /// <summary>
         /// 获取所有对象池的统计信息
         /// </summary>
         /// <returns>对象池信息数组</returns>
@@ -157,22 +174,6 @@ namespace MonsterCache.Runtime
             return result;
         }
 
-        /// <summary>
-        /// 清空所有对象池
-        /// </summary>
-        public static void Clear()
-        {
-            lock (objectPoolDict)
-            {
-                // 逐个清空对象池
-                foreach (var pool in objectPoolDict.Values)
-                {
-                    pool.ReleaseAll();
-                }
-
-                objectPoolDict.Clear();
-            }
-        }
 
         #region 性能分析和调试功能
 
@@ -227,18 +228,21 @@ namespace MonsterCache.Runtime
         /// <returns>可能存在内存泄漏的对象池列表</returns>
         public static PoolAnalysisReport[] DetectMemoryLeaks()
         {
-            var leaks = new List<PoolAnalysisReport>();
             var reports = AnalyzeAllPools();
 
-            foreach (var report in reports)
-            {
-                if (report.Metrics.MemoryLeakRisk > 7.0f)
-                {
-                    leaks.Add(report);
-                }
-            }
+            return DetectMemoryLeaks(reports);
+        }
 
-            return leaks.ToArray();
+        /// <summary>
+        /// 检查内存泄漏
+        /// </summary>
+        /// <param name="reports"> 需要被检测的分析报告 </param>
+        /// <returns>可能存在内存泄漏的对象池列表</returns>
+        public static PoolAnalysisReport[] DetectMemoryLeaks(PoolAnalysisReport[] reports)
+        {
+            return reports
+                .Where(report => report.Metrics.MemoryLeakRisk > 7.0f)
+                .ToArray();
         }
 
         /// <summary>
@@ -248,6 +252,17 @@ namespace MonsterCache.Runtime
         public static string GeneratePerformanceReport()
         {
             var reports = AnalyzeAllPools();
+
+            return GeneratePerformanceReport(reports);
+        }
+
+        /// <summary>
+        /// 生成性能报告摘要
+        /// </summary>
+        /// <param name="reports">分析完成的报告</param>
+        /// <returns>格式化的性能报告字符串</returns>
+        public static string GeneratePerformanceReport(PoolAnalysisReport[] reports)
+        {
             var sb = new System.Text.StringBuilder();
 
             sb.AppendLine("=== 对象池性能报告 ===");
@@ -293,17 +308,31 @@ namespace MonsterCache.Runtime
         public static int AutoOptimize(bool applyHighPriorityOnly = true)
         {
             var reports = AnalyzeAllPools();
+            return AutoOptimize(reports, applyHighPriorityOnly);
+        }
+
+        /// <summary>
+        /// 自动应用优化建议
+        /// </summary>
+        /// <param name="reports">需要分析的报告</param>
+        /// <param name="applyHighPriorityOnly">是否只应用高优先级优化</param>
+        /// <returns>应用的优化数量</returns>
+        public static int AutoOptimize(PoolAnalysisReport[] reports, bool applyHighPriorityOnly = true)
+        {
             var optimizationCount = 0;
 
             foreach (var report in reports)
             {
                 foreach (var issue in report.Issues)
                 {
-                    if (applyHighPriorityOnly && issue.Severity < 7) continue;
+                    if (applyHighPriorityOnly && issue.Severity < 7)
+                        // 仅应用高优先级优化
+                        continue;
 
                     switch (issue.IssueType)
                     {
                         case PoolIssueType.PoolTooSmall:
+                            // 自动扩容
                             if (issue.Data.TryGetValue("RecommendedSize", out var size) && size is int recommendedSize)
                             {
                                 var currentSize = report.PoolInfo.UnusedPoolableCount;
@@ -319,6 +348,7 @@ namespace MonsterCache.Runtime
                             break;
 
                         case PoolIssueType.PoolTooLarge:
+                            // 自动缩小
                             if (issue.Data.TryGetValue("ExcessSize", out var excess) && excess is int excessSize)
                             {
                                 Shrink(report.PoolType, excessSize);
@@ -340,30 +370,42 @@ namespace MonsterCache.Runtime
         /// <summary>
         /// 计算对象池性能指标
         /// </summary>
+        /// <param name="info">需要检测的对象池信息</param>
         private static PoolMetrics CalculateMetrics(ObjectPoolInfo info)
         {
+            // TODO: 优化指标计算公式
             var totalOperations = info.AcquirePoolableCount + info.ReleasePoolableCount;
             if (totalOperations == 0)
             {
-                return new PoolMetrics(0, 0, 0, 0, 5); // 默认推荐大小
+                return new PoolMetrics(0, 0, 0, 0, 5);
             }
 
-            // 内存泄漏风险 = |获取次数 - 归还次数| / 总操作次数 * 10
+            // 内存泄漏风险 = |获取次数 - 归还次数| / 总操作次数 * 20 , 此处我们约定10.0f为threshold
+            // 达到约定上限10f时，获取次数是归还次数的 3 倍,即只有 33% 的对象被回收
             var leakDiff = Math.Abs(info.AcquirePoolableCount - info.ReleasePoolableCount);
             var memoryLeakRisk = Math.Min(10f, (leakDiff / (float)totalOperations) * 20f);
 
             // 池效率 = 重用次数 / 总获取次数
             var reuseCount = info.AcquirePoolableCount - info.AddPoolableCount;
-            var poolEfficiency = info.AcquirePoolableCount > 0 ? reuseCount / (float)info.AcquirePoolableCount : 0f;
+            var poolEfficiency =
+                info.AcquirePoolableCount > 0
+                    ? reuseCount / (float)info.AcquirePoolableCount
+                    : 0f;
 
-            // 平均利用率
+            // 平均利用率 = 当前使用量 / 池中总量
             var totalPoolSize = info.UnusedPoolableCount + info.UsedPoolableCount;
-            var averageUtilization = totalPoolSize > 0 ? info.UsedPoolableCount / (float)totalPoolSize : 0f;
+            var averageUtilization =
+                totalPoolSize > 0
+                    ? info.UsedPoolableCount / (float)totalPoolSize
+                    : 0f;
 
-            // 创建vs复用比率
-            var newVsReuseRatio = reuseCount > 0 ? info.AddPoolableCount / (float)reuseCount : float.MaxValue;
+            // 创建vs复用比率 = 添加次数 / 重用次数
+            var newVsReuseRatio =
+                reuseCount > 0
+                    ? info.AddPoolableCount / (float)reuseCount
+                    : float.MaxValue;
 
-            // 建议池大小 = 当前使用量 * 1.2 + 5 (缓冲)
+            // 建议池大小 = 当前使用量 * 1.2 + 5 (用于缓冲)
             var recommendedSize = Math.Max(5, (int)(info.UsedPoolableCount * 1.2f) + 5);
 
             return new PoolMetrics(memoryLeakRisk, poolEfficiency, averageUtilization, newVsReuseRatio,
@@ -373,16 +415,19 @@ namespace MonsterCache.Runtime
         /// <summary>
         /// 检测对象池问题
         /// </summary>
+        /// <param name="info">需要检测的对象池信息</param>
+        /// <param name="metrics">该对象池指标数值</param>
         private static PoolIssue[] DetectIssues(ObjectPoolInfo info, PoolMetrics metrics)
         {
             var issues = new List<PoolIssue>();
 
             // 内存泄漏检测
+            // 7.0 大概是当有一半以上未被回收时
             if (metrics.MemoryLeakRisk > 7.0f)
             {
                 issues.Add(new PoolIssue(PoolIssueType.PotentialMemoryLeak,
                     (int)metrics.MemoryLeakRisk,
-                    $"获取({info.AcquirePoolableCount})和归还({info.ReleasePoolableCount})次数相差过大",
+                    $"获取({info.AcquirePoolableCount})和归还({info.ReleasePoolableCount})次数相差过大,一半以上未归还",
                     "检查是否有对象未正确归还到池中"));
             }
 
@@ -405,7 +450,7 @@ namespace MonsterCache.Runtime
             }
 
             // 频繁分配检测
-            if (metrics.NewVsReuseRatio > 0.5f)
+            if (metrics.NewVersusReuseRatio > 0.5f)
             {
                 issues.Add(new PoolIssue(PoolIssueType.FrequentAllocation, 7,
                     "新建对象比例过高，影响性能",

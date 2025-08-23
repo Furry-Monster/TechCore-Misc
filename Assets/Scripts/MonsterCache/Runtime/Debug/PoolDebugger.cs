@@ -320,4 +320,36 @@ namespace MonsterCache.Runtime.Debug
             return recommendations.ToArray();
         }
     }
+
+    public readonly struct PoolHealthCheckResult
+    {
+        /// <summary>总对象池数量</summary>
+        public readonly int TotalPools;
+
+        /// <summary>健康的对象池数量</summary>
+        public readonly int HealthyPools;
+
+        /// <summary>有问题的对象池数量</summary>
+        public readonly int ProblematicPools;
+
+        /// <summary>可能内存泄漏的对象池数量</summary>
+        public readonly int MemoryLeakSuspects;
+
+        /// <summary>总体健康度 (0-100)</summary>
+        public readonly int OverallHealth;
+
+        /// <summary>建议列表</summary>
+        public readonly string[] Recommendations;
+
+        public PoolHealthCheckResult(int totalPools, int healthyPools, int problematicPools, int memoryLeakSuspects,
+            int overallHealth, string[] recommendations)
+        {
+            TotalPools = totalPools;
+            HealthyPools = healthyPools;
+            ProblematicPools = problematicPools;
+            MemoryLeakSuspects = memoryLeakSuspects;
+            OverallHealth = overallHealth;
+            Recommendations = recommendations;
+        }
+    }
 }

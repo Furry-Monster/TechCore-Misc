@@ -43,51 +43,19 @@ namespace MonsterCache.Runtime.Debug
         public readonly float AverageUtilization;
 
         /// <summary>创建vs复用比率</summary>
-        public readonly float NewVsReuseRatio;
+        public readonly float NewVersusReuseRatio;
 
         /// <summary>建议的池大小</summary>
         public readonly int RecommendedPoolSize;
 
         public PoolMetrics(float memoryLeakRisk, float poolEfficiency, float averageUtilization,
-            float newVsReuseRatio, int recommendedPoolSize)
+            float newVersusReuseRatio, int recommendedPoolSize)
         {
             MemoryLeakRisk = memoryLeakRisk;
             PoolEfficiency = poolEfficiency;
             AverageUtilization = averageUtilization;
-            NewVsReuseRatio = newVsReuseRatio;
+            NewVersusReuseRatio = newVersusReuseRatio;
             RecommendedPoolSize = recommendedPoolSize;
-        }
-    }
-
-    public readonly struct PoolHealthCheckResult
-    {
-        /// <summary>总对象池数量</summary>
-        public readonly int TotalPools;
-
-        /// <summary>健康的对象池数量</summary>
-        public readonly int HealthyPools;
-
-        /// <summary>有问题的对象池数量</summary>
-        public readonly int ProblematicPools;
-
-        /// <summary>可能内存泄漏的对象池数量</summary>
-        public readonly int MemoryLeakSuspects;
-
-        /// <summary>总体健康度 (0-100)</summary>
-        public readonly int OverallHealth;
-
-        /// <summary>建议列表</summary>
-        public readonly string[] Recommendations;
-
-        public PoolHealthCheckResult(int totalPools, int healthyPools, int problematicPools, int memoryLeakSuspects,
-            int overallHealth, string[] recommendations)
-        {
-            TotalPools = totalPools;
-            HealthyPools = healthyPools;
-            ProblematicPools = problematicPools;
-            MemoryLeakSuspects = memoryLeakSuspects;
-            OverallHealth = overallHealth;
-            Recommendations = recommendations;
         }
     }
 }

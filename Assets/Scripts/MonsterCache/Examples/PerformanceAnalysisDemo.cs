@@ -217,7 +217,7 @@ namespace MonsterCache.Examples
                 Console.WriteLine($"  利用率: {metrics.AverageUtilization:P2} (当前使用/总容量)");
                 Console.WriteLine($"  内存泄漏风险: {metrics.MemoryLeakRisk:F2}/10");
                 Console.WriteLine(
-                    $"  创建vs复用比率: {(Mathf.Approximately(metrics.NewVsReuseRatio, float.MaxValue) ? "∞" : metrics.NewVsReuseRatio.ToString("F2"))}");
+                    $"  创建vs复用比率: {(Mathf.Approximately(metrics.NewVersusReuseRatio, float.MaxValue) ? "∞" : metrics.NewVersusReuseRatio.ToString("F2"))}");
                 Console.WriteLine($"  建议池大小: {metrics.RecommendedPoolSize}");
 
                 // 计算一些额外的有用指标
